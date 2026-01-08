@@ -1,8 +1,6 @@
 import sys
 import os
 
-# Add the project root to sys.path to import gemini_docs_mcp
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gemini_docs_mcp.server import sanitize_term
 
