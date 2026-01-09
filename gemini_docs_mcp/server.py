@@ -14,6 +14,9 @@ from typing import Annotated
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# FTS5 special characters that require quoting to be parsed correctly
+FTS5_SPECIAL_CHARS = [".", "@", "-"]
+
 @asynccontextmanager
 async def server_lifespan(server: FastMCP):
     """Lifespan context manager for the FastMCP server."""
@@ -44,16 +47,16 @@ async def server_lifespan(server: FastMCP):
 
 def sanitize_term(query):
     """
-    Fixes 'syntax error near "."' by wrapping terms with dots in double quotes.
-    For standard FTS5 (even with trigram), "2.5" is treated as a valid phrase,
-    whereas 2.5 raw is treated as broken syntax.
+    Fixes 'syntax error near "."' or "@" by wrapping terms with special characters in double quotes.
+    For standard FTS5 (even with trigram), terms like "@google/genai" must be quoted 
+    to pass as a single phrase/token.
     """
     terms = query.split()
     sanitized = []
     for term in terms:
-        # If the term contains a dot, it MUST be quoted to pass the FTS5 parser.
+        # If the term contains any of the special characters, it MUST be quoted to pass the FTS5 parser.
         # We also escape any existing double quotes by doubling them (" -> "")
-        if '.' in term:
+        if any(char in term for char in FTS5_SPECIAL_CHARS):
             safe_term = term.replace('"', '""')
             sanitized.append(f'"{safe_term}"')
         else:
