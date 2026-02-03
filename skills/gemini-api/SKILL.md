@@ -54,7 +54,7 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({});
 const response = await ai.models.generateContent({
-  model: "gemini-23-flash-preview",
+  model: "gemini-3-flash-preview",
   contents: "Explain quantum computing"
 });
 console.log(response.text);
