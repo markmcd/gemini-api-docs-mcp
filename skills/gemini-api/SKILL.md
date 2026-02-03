@@ -52,7 +52,7 @@ print(response.text)
 ```typescript
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: "YOUR_API_KEY" });
+const ai = new GoogleGenAI({});
 const response = await ai.models.generateContent({
   model: "gemini-23-flash-preview",
   contents: "Explain quantum computing"
