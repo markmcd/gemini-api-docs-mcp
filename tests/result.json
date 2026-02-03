@@ -1,34 +1,153 @@
 {
   "summary": {
     "total": 117,
-    "passed": 114,
-    "failed": 3,
+    "passed": 106,
+    "failed": 11,
     "skipped": 0
   },
   "failures": [
     {
-      "id": "temperature",
+      "id": "py_24",
       "language": "python",
-      "prompt": "Write a Python script using the Gemini API SDK that generates content with a specific temperature setting. The script should initialize the client and use the generate_content method with the gemini-2.5-flash model. The prompt should be 'Explain how AI works', and the temperature should be set to 0.1. Print the generated text.",
+      "prompt": "When I use the Python api with the gemini 2.0 flash model, and when the output is quite long, the returned content will be an array of output chunks instead of the whole thing. i guess it was doing some kind of streaming type of input. how to turn this off and get the whole output together?\n\n",
       "error": null,
-      "analysis": "old_sdk",
-      "script": "tests/generated/temperature.py"
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "deprecated_model",
+        "sdk_passed": false,
+        "model_passed": false
+      },
+      "script": "tests/generated/py_24.py"
     },
     {
-      "id": "py_29",
+      "id": "py_30",
       "language": "python",
-      "prompt": "Write a python script using Google GenAI that fetches a random cat fact and then sends it to you, and then fetches your response to that fact. give me just the script without any comments or explanations. ",
+      "prompt": "Write a Python code to translate English text to polite business Japanese. \nProvide ONLY the Japanese translation, without any explanations or alternatives:",
       "error": null,
-      "analysis": "old_sdk",
-      "script": "tests/generated/py_29.py"
+      "analysis": {
+        "sdk_version": "no_sdk",
+        "model_version": "no_model",
+        "sdk_passed": false,
+        "model_passed": true
+      },
+      "script": "tests/generated/py_30.py"
     },
     {
-      "id": "ts_41",
+      "id": "py_44",
+      "language": "python",
+      "prompt": "How to use Google Gen AI Python sdk to create a chat with system prompt",
+      "error": null,
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "deprecated_model",
+        "sdk_passed": false,
+        "model_passed": false
+      },
+      "script": "tests/generated/py_44.py"
+    },
+    {
+      "id": "ts_07",
       "language": "typescript",
-      "prompt": "I want to extract keywords from pdf (convert it to inline data) using gemini API in TypeScript",
+      "prompt": "hey, i am accessing gemini in my typescript but there a problem like when give input to you and respond it but i cannot continue the chat session, \ncould you help me write a typescript code to handle the errors, in case there is an error from API, I could create a new chat session with previous history\n\nI can use chat.getHistory() to get the history, I do not need to record the history myself, the chat session already store the history",
       "error": null,
-      "analysis": "old_sdk",
-      "script": "tests/generated/ts_41.ts"
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "deprecated_model",
+        "sdk_passed": false,
+        "model_passed": false
+      },
+      "script": "tests/generated/ts_07.ts"
+    },
+    {
+      "id": "ts_11",
+      "language": "typescript",
+      "prompt": "how can an ai model like you reading csv files? implement a TypeScript script that using gemini-2.0-flash to read a csv file, and I could ask model requestions regarding the csv data",
+      "error": null,
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "deprecated_model",
+        "sdk_passed": false,
+        "model_passed": false
+      },
+      "script": "tests/generated/ts_11.ts"
+    },
+    {
+      "id": "ts_18",
+      "language": "typescript",
+      "prompt": "Generate TypeScript code\n\nOverall Description:\ncreate an image generator that will use gemini-2.0-flash coding agents. The image generator should receive a request, interpret that request using its own gemini-2.0-flash agent and provide an optimal prompt for a lightweight yet effective Stable Diffusion model. \n\n",
+      "error": null,
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "deprecated_model",
+        "sdk_passed": false,
+        "model_passed": false
+      },
+      "script": "tests/generated/ts_18.ts"
+    },
+    {
+      "id": "ts_31",
+      "language": "typescript",
+      "prompt": "write a TypeScript program with gui that incorporate the power of gemini to help me with chess",
+      "error": null,
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "deprecated_model",
+        "sdk_passed": false,
+        "model_passed": false
+      },
+      "script": "tests/generated/ts_31.ts"
+    },
+    {
+      "id": "ts_33",
+      "language": "typescript",
+      "prompt": "Write a typescript code to translate English text to polite business Japanese. Provide ONLY the Japanese translation, without any explanations or alternatives:",
+      "error": null,
+      "analysis": {
+        "sdk_version": "no_sdk",
+        "model_version": "no_model",
+        "sdk_passed": false,
+        "model_passed": true
+      },
+      "script": "tests/generated/ts_33.ts"
+    },
+    {
+      "id": "ts_35",
+      "language": "typescript",
+      "prompt": "You are a typescript expert, write a simple nodejs server, which could serve POST http request to return model response based on user's input, define the expected request and response class",
+      "error": null,
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "current_model",
+        "sdk_passed": false,
+        "model_passed": true
+      },
+      "script": "tests/generated/ts_35.ts"
+    },
+    {
+      "id": "ts_47",
+      "language": "typescript",
+      "prompt": "How can I send two images to the Gemini model, not just one? I am using the google gemini TypeScript api",
+      "error": null,
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "deprecated_model",
+        "sdk_passed": false,
+        "model_passed": false
+      },
+      "script": "tests/generated/ts_47.ts"
+    },
+    {
+      "id": "ts_54",
+      "language": "typescript",
+      "prompt": "write TypeScript code to Generate a simple GUI for interacting with Google Gemini",
+      "error": null,
+      "analysis": {
+        "sdk_version": "old_sdk",
+        "model_version": "current_model",
+        "sdk_passed": false,
+        "model_passed": true
+      },
+      "script": "tests/generated/ts_54.ts"
     }
   ]
 }
