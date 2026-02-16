@@ -13,8 +13,7 @@ from mcp.client.stdio import stdio_client
 from typing import Dict, Any, List, Optional
 
 # Configuration
-MODEL_NAME = "gemini-flash-latest"
-SKILL_MODEL = "gemini-3-flash-preview"  # Default model for skill mode
+DEFAULT_MODEL = "gemini-3-flash-preview"
 PROMPTS_FILE = "tests/test_prompts.json"
 GENERATED_DIR = "tests/generated"
 RESULT_FILE = "tests/result.json"
@@ -188,7 +187,7 @@ def load_prompts() -> List[Dict[str, Any]]:
     with open(PROMPTS_FILE, 'r') as f:
         return json.load(f)
 
-async def generate_code(prompt:str, language: str, client:genai.Client, mcp_session:Optional[ClientSession], retries=3) -> str:
+async def generate_code(prompt:str, language: str, client:genai.Client, mcp_session:Optional[ClientSession], retries=3, model_name=DEFAULT_MODEL) -> str:
     print(f"Generating code for ({language}): {prompt[:50]}...")
 
     tools = [mcp_session] if mcp_session else None
@@ -197,7 +196,7 @@ async def generate_code(prompt:str, language: str, client:genai.Client, mcp_sess
         try:
             # Use a model that's good at coding. 
             response = await client.aio.models.generate_content(
-                model=MODEL_NAME,
+                model=model_name,
                 contents=prompt,
                 config=genai.types.GenerateContentConfig(
                   tools=tools,
@@ -506,8 +505,8 @@ async def main():
                         help='Evaluation mode: static (MCP+SDK check), execute (MCP+run code), skill (API+function calling), vanilla (No MCP/Tools)')
     parser.add_argument('--max', type=int, help='Maximum number of tests to run')
     parser.add_argument('--ids', nargs='+', help='Specific test IDs to run')
-    parser.add_argument('--model', type=str, default=SKILL_MODEL, 
-                        help=f'Model for skill mode (default: {SKILL_MODEL})')
+    parser.add_argument('--model', type=str, default=DEFAULT_MODEL, 
+                        help=f'Model for evaluation (default: {DEFAULT_MODEL})')
     args = parser.parse_args()
 
     setup_directories()
@@ -555,7 +554,7 @@ async def main():
 
     # Vanilla mode: use Gemini API without MCP or tools
     elif args.mode == 'vanilla':
-        print(f"Using model: {MODEL_NAME} (No Tools/MCP)")
+        print(f"Using model: {args.model} (No Tools/MCP)")
         
         for test_case in prompts:
             test_id = test_case.get('id', 'unknown')
@@ -563,7 +562,7 @@ async def main():
             
             print(f"\nTest: {test_id} ({language})")
             try:
-                code = await generate_code(test_case['prompt'], language, client, None)
+                code = await generate_code(test_case['prompt'], language, client, None, model_name=args.model)
                 script_path = save_code(code, test_id, language)
                 
                 analysis = analyze_code(code, language)
@@ -591,7 +590,7 @@ async def main():
                 
                 print(f"\nTest: {test_id} ({language})")
                 try:
-                    code = await generate_code(test_case['prompt'], language, client, session)
+                    code = await generate_code(test_case['prompt'], language, client, session, model_name=args.model)
                     script_path = save_code(code, test_id, language)
                     
                     if args.mode == 'static':
