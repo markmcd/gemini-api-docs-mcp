@@ -636,6 +636,25 @@ async def main():
     print(f"Failed: {failed_count}")
     print(f"Skipped: {skipped_count}")
 
+    # Calculate category stats
+    category_stats = {}
+    for test_id, result in results.items():
+        test_case = next((p for p in prompts if p.get('id') == test_id), {})
+        category = test_case.get('type', 'unknown')
+        
+        if category not in category_stats:
+            category_stats[category] = {"total": 0, "passed": 0, "failed": 0, "skipped": 0}
+        
+        stats = category_stats[category]
+        stats["total"] += 1
+        
+        if result.get('passed') is True:
+            stats["passed"] += 1
+        elif result.get('passed') is False:
+            stats["failed"] += 1
+        else:
+            stats["skipped"] += 1
+
     # Generate result.json
     failures = []
     for test_id, result in results.items():
@@ -645,6 +664,7 @@ async def main():
             failure_entry = {
                 "id": test_id,
                 "language": test_case.get('language', 'unknown'),
+                "type": test_case.get('type', 'unknown'),
                 "prompt": test_case.get('prompt', 'unknown'),
                 "error": result.get('error'),
                 "analysis": result.get('analysis'),
@@ -665,6 +685,7 @@ async def main():
             "failed": failed_count,
             "skipped": skipped_count
         },
+        "by_category": category_stats,
         "failures": failures
     }
 
