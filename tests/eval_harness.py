@@ -366,7 +366,7 @@ def fetch_url(url: str, timeout: int = 10) -> str:
         return f"Error: {e}"
 
 
-async def generate_code_with_skill(prompt: str, language: str, client: genai.Client, model: str, max_steps: int = 8) -> str:
+async def generate_code_with_skill(prompt: str, language: str, client: genai.Client, model: str, output_dir: str, max_steps: int = 8) -> str:
     """Generate code using Gemini API with skill function calling."""
     print(f"Generating code via API (model: {model}) for ({language}): {prompt[:50]}...")
     
@@ -449,14 +449,14 @@ async def generate_code_with_skill(prompt: str, language: str, client: genai.Cli
         print(f"  WARNING: Reached max steps ({max_steps}), stopping function call loop")
     
     # Log conversation history to file for debugging
-    log_conversation_history(messages, response, prompt)
+    log_conversation_history(messages, response, prompt, output_dir)
     
     return extract_code(response.text, language)
 
 
-def log_conversation_history(messages: list, response, prompt: str) -> None:
+def log_conversation_history(messages: list, response, prompt: str, output_dir: str) -> None:
     """Log conversation history to file for debugging."""
-    log_file = "tests/skill_conversation_log.jsonl"
+    log_file = os.path.join(output_dir, "skill_conversation_log.jsonl")
     
     # Track which functions were called and build full turn history
     functions_called = []
@@ -546,7 +546,7 @@ async def main():
             
             print(f"\nTest: {test_id} ({language})")
             try:
-                code = await generate_code_with_skill(test_case['prompt'], language, client, args.model)
+                code = await generate_code_with_skill(test_case['prompt'], language, client, args.model, run_dir)
                 script_path = save_code(code, test_id, language, generated_dir)
                 
                 analysis = analyze_code(code, language)
