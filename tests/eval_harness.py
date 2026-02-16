@@ -188,8 +188,10 @@ def load_prompts() -> List[Dict[str, Any]]:
     with open(PROMPTS_FILE, 'r') as f:
         return json.load(f)
 
-async def generate_code(prompt:str, language: str, client:genai.Client, mcp_session:ClientSession, retries=3) -> str:
+async def generate_code(prompt:str, language: str, client:genai.Client, mcp_session:Optional[ClientSession], retries=3) -> str:
     print(f"Generating code for ({language}): {prompt[:50]}...")
+
+    tools = [mcp_session] if mcp_session else None
 
     for attempt in range(retries + 1):
         try:
@@ -198,7 +200,7 @@ async def generate_code(prompt:str, language: str, client:genai.Client, mcp_sess
                 model=MODEL_NAME,
                 contents=prompt,
                 config=genai.types.GenerateContentConfig(
-                  tools=[mcp_session],
+                  tools=tools,
                   temperature=0.1 # Lower temperature for more deterministic code
                 )
             )
@@ -500,8 +502,8 @@ def log_conversation_history(messages: list, response, prompt: str) -> None:
 
 async def main():
     parser = argparse.ArgumentParser(description="Gemini Docs MCP Eval Harness")
-    parser.add_argument('--mode', choices=['execute', 'static', 'skill'], default='static', 
-                        help='Evaluation mode: static (MCP+SDK check), execute (MCP+run code), skill (API+function calling)')
+    parser.add_argument('--mode', choices=['execute', 'static', 'skill', 'vanilla'], default='static', 
+                        help='Evaluation mode: static (MCP+SDK check), execute (MCP+run code), skill (API+function calling), vanilla (No MCP/Tools)')
     parser.add_argument('--max', type=int, help='Maximum number of tests to run')
     parser.add_argument('--ids', nargs='+', help='Specific test IDs to run')
     parser.add_argument('--model', type=str, default=SKILL_MODEL, 
@@ -535,6 +537,33 @@ async def main():
             print(f"\nTest: {test_id} ({language})")
             try:
                 code = await generate_code_with_skill(test_case['prompt'], language, client, args.model)
+                script_path = save_code(code, test_id, language)
+                
+                analysis = analyze_code(code, language)
+                passed = analysis['sdk_passed']
+                results[test_id] = {
+                    "passed": passed, 
+                    "analysis": analysis, 
+                    "script": script_path
+                }
+                status = f"sdk:{analysis['sdk_version']}, model:{analysis['model_version']}"
+                print(f"  Analysis: {status} -> {'PASSED' if passed else 'FAILED'}")
+
+            except Exception as e:
+                print(f"  ERROR during test execution: {e}")
+                results[test_id] = {"passed": False, "error": str(e)}
+
+    # Vanilla mode: use Gemini API without MCP or tools
+    elif args.mode == 'vanilla':
+        print(f"Using model: {MODEL_NAME} (No Tools/MCP)")
+        
+        for test_case in prompts:
+            test_id = test_case.get('id', 'unknown')
+            language = test_case.get('language', 'python')
+            
+            print(f"\nTest: {test_id} ({language})")
+            try:
+                code = await generate_code(test_case['prompt'], language, client, None)
                 script_path = save_code(code, test_id, language)
                 
                 analysis = analyze_code(code, language)
