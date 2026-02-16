@@ -218,9 +218,9 @@ async def generate_code(prompt:str, language: str, client:genai.Client, mcp_sess
                 raise e
     return ""
 
-def save_code(code: str, test_id: str, language: str) -> str:
+def save_code(code: str, test_id: str, language: str, output_dir: str) -> str:
     ext = "py" if language == "python" else "ts"
-    file_path = os.path.join(GENERATED_DIR, f"{test_id}.{ext}")
+    file_path = os.path.join(output_dir, f"{test_id}.{ext}")
     with open(file_path, 'w') as f:
         f.write(code)
     return file_path
@@ -500,6 +500,9 @@ def log_conversation_history(messages: list, response, prompt: str) -> None:
 
 
 async def main():
+    start_time = datetime.datetime.now()
+    timestamp_str = start_time.strftime("%Y%m%d_%H%M%S")
+    
     parser = argparse.ArgumentParser(description="Gemini Docs MCP Eval Harness")
     parser.add_argument('--mode', choices=['execute', 'static', 'skill', 'vanilla'], default='static', 
                         help='Evaluation mode: static (MCP+SDK check), execute (MCP+run code), skill (API+function calling), vanilla (No MCP/Tools)')
@@ -509,7 +512,15 @@ async def main():
                         help=f'Model for evaluation (default: {DEFAULT_MODEL})')
     args = parser.parse_args()
 
-    setup_directories()
+    # Create unique run directory
+    run_dir = os.path.join("tests", "runs", f"{timestamp_str}_{args.mode}_{args.model}")
+    generated_dir = os.path.join(run_dir, "generated")
+    result_file = os.path.join(run_dir, "result.json")
+    
+    os.makedirs(generated_dir, exist_ok=True)
+    print(f"=== Starting Evaluation (Mode: {args.mode}) ===")
+    print(f"Run Output Directory: {run_dir}")
+
     prompts = load_prompts()
     
     # Filter prompts
@@ -536,7 +547,7 @@ async def main():
             print(f"\nTest: {test_id} ({language})")
             try:
                 code = await generate_code_with_skill(test_case['prompt'], language, client, args.model)
-                script_path = save_code(code, test_id, language)
+                script_path = save_code(code, test_id, language, generated_dir)
                 
                 analysis = analyze_code(code, language)
                 passed = analysis['sdk_passed']
@@ -563,7 +574,7 @@ async def main():
             print(f"\nTest: {test_id} ({language})")
             try:
                 code = await generate_code(test_case['prompt'], language, client, None, model_name=args.model)
-                script_path = save_code(code, test_id, language)
+                script_path = save_code(code, test_id, language, generated_dir)
                 
                 analysis = analyze_code(code, language)
                 passed = analysis['sdk_passed']
@@ -591,7 +602,7 @@ async def main():
                 print(f"\nTest: {test_id} ({language})")
                 try:
                     code = await generate_code(test_case['prompt'], language, client, session, model_name=args.model)
-                    script_path = save_code(code, test_id, language)
+                    script_path = save_code(code, test_id, language, generated_dir)
                     
                     if args.mode == 'static':
                         analysis = analyze_code(code, language)
@@ -642,6 +653,12 @@ async def main():
             failures.append(failure_entry)
 
     report = {
+        "metadata": {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "model": args.model,
+            "mode": args.mode,
+            "duration_seconds": (datetime.datetime.now() - start_time).total_seconds()
+        },
         "summary": {
             "total": total_count,
             "passed": passed_count,
@@ -651,9 +668,9 @@ async def main():
         "failures": failures
     }
 
-    with open(RESULT_FILE, "w") as f:
+    with open(result_file, "w") as f:
         json.dump(report, f, indent=2)
-    print(f"\nResults saved to {RESULT_FILE}")
+    print(f"\nResults saved to {result_file}")
 
     # Exit with error if any failed (ignoring skipped)
     if failed_count > 0:
