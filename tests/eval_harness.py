@@ -294,27 +294,21 @@ def load_skill(name: str) -> str:
 def build_skill_system_instruction() -> str:
     """Build the system instruction with available skills."""
     skills = get_available_skills()
-    skill_list = "\n".join([f"- **{name}**: {desc}" for name, desc in skills.items()])
+    skill_list = "\n".join([f"  <skill>\n    <name>{name}</name>\n    <description>{desc}</description>\n    <location>{SKILL_PATH}/SKILL.md</location>\n  </skill>" for name, desc in skills.items()])
     
-    return f"""<skills>
-You have access to specialized skills that provide domain knowledge and capabilities. Use the `skills` tool to load a skill's content when relevant to the user's task.
+    return f"""
+# Available Agent Skills
+
+You have access to the following specialized skills. To activate a skill and receive its detailed instructions, call the `activate_skill` tool with the skill's name.
 
 <available_skills>
 {skill_list}
-</available_skills>
-
-**BLOCKING REQUIREMENT**: When a skill is relevant, invoke the `skills` tool IMMEDIATELY as your first action. Do NOT announce or mention a skill without actually loading it.
-
-Rules:
-1. Load relevant skills BEFORE generating any other response about the task
-2. Only use skills listed in <available_skills> above
-3. Do not load a skill that is already loaded in this conversation
-</skills>"""
+</available_skills>""".strip()
 
 
-# Define the skills function for Gemini function calling
-skills_function = genai.types.FunctionDeclaration(
-    name="skills",
+# Define the activate_skill function for Gemini function calling
+activate_skill_function = genai.types.FunctionDeclaration(
+    name="activate_skill",
     description="Load a skill's instructional content into context. Available skills are listed in the system message. Pass the skill name to load its content.",
     parameters={
         "type": "object",
@@ -371,7 +365,7 @@ async def generate_code_with_skill(prompt: str, language: str, client: genai.Cli
     print(f"Generating code via API (model: {model}) for ({language}): {prompt[:50]}...")
     
     system_instruction = build_skill_system_instruction()
-    tools = [genai.types.Tool(function_declarations=[skills_function, fetch_url_function])]
+    tools = [genai.types.Tool(function_declarations=[activate_skill_function, fetch_url_function])]
     
     config = genai.types.GenerateContentConfig(
         system_instruction=system_instruction,
@@ -415,9 +409,9 @@ async def generate_code_with_skill(prompt: str, language: str, client: genai.Cli
                 func_call = part.function_call
                 
                 # Dispatch to the correct function
-                if func_call.name == "skills":
+                if func_call.name == "activate_skill":
                     arg_value = func_call.args.get('name', 'unknown')
-                    print(f"    -> skills: {arg_value}")
+                    print(f"    -> activate_skill: {arg_value}")
                     result = load_skill(arg_value)
                 elif func_call.name == "fetch_url":
                     arg_value = func_call.args.get('url', '')
@@ -488,7 +482,7 @@ def log_conversation_history(messages: list, response, prompt: str, output_dir: 
     log_entry = {
         "timestamp": datetime.datetime.now().isoformat(),
         "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,
-        "skills_called": "skills" in functions_called,
+        "skills_called": "activate_skill" in functions_called,
         "fetch_called": "fetch_url" in functions_called,
         "tools_called": functions_called,
         "turns": turns,
