@@ -18,7 +18,7 @@ SKILL_MODEL = "gemini-3-flash-preview"  # Default model for skill mode
 PROMPTS_FILE = "tests/test_prompts.json"
 GENERATED_DIR = "tests/generated"
 RESULT_FILE = "tests/result.json"
-SKILL_PATH = "skills/gemini-api"
+SKILL_PATH = "skills/gemini-api-dev"
 
 # Model validation patterns
 DEPRECATED_MODELS = {
