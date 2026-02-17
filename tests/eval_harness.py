@@ -200,7 +200,6 @@ async def generate_code(prompt:str, language: str, client:genai.Client, mcp_sess
                 contents=prompt,
                 config=genai.types.GenerateContentConfig(
                   tools=tools,
-                  temperature=0.1, # Lower temperature for more deterministic code
                   http_options={'timeout': 120000} # 2 minutes timeout
                 )
             )
