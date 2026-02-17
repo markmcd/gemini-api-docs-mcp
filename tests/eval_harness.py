@@ -200,7 +200,8 @@ async def generate_code(prompt:str, language: str, client:genai.Client, mcp_sess
                 contents=prompt,
                 config=genai.types.GenerateContentConfig(
                   tools=tools,
-                  temperature=0.1 # Lower temperature for more deterministic code
+                  temperature=0.1, # Lower temperature for more deterministic code
+                  http_options={'timeout': 120000} # 2 minutes timeout
                 )
             )
             return extract_code(response.text, language)
@@ -370,6 +371,7 @@ async def generate_code_with_skill(prompt: str, language: str, client: genai.Cli
     config = genai.types.GenerateContentConfig(
         system_instruction=system_instruction,
         tools=tools,
+        http_options={'timeout': 120000} # 2 minutes timeout
     )
     
     # Initial request
@@ -504,10 +506,15 @@ async def main():
     parser.add_argument('--ids', nargs='+', help='Specific test IDs to run')
     parser.add_argument('--model', type=str, default=DEFAULT_MODEL, 
                         help=f'Model for evaluation (default: {DEFAULT_MODEL})')
+    parser.add_argument('--output-dir', type=str, help='Directory to save results. If provided, enables resumable runs.')
     args = parser.parse_args()
 
-    # Create unique run directory
-    run_dir = os.path.join("tests", "runs", f"{timestamp_str}_{args.mode}_{args.model}")
+    # Determine run directory
+    if args.output_dir:
+        run_dir = args.output_dir
+    else:
+        run_dir = os.path.join("tests", "runs", f"{timestamp_str}_{args.mode}_{args.model}")
+    
     generated_dir = os.path.join(run_dir, "generated")
     result_file = os.path.join(run_dir, "result.json")
     
@@ -538,6 +545,23 @@ async def main():
             test_id = test_case.get('id', 'unknown')
             language = test_case.get('language', 'python')
             
+            # Check if code file already exists as a proxy for "done"
+            ext = "py" if language == "python" else "ts"
+            expected_script = os.path.join(generated_dir, f"{test_id}.{ext}")
+            
+            if os.path.exists(expected_script) and args.output_dir:
+                 print(f"Skipping {test_id} (already exists)")
+                 with open(expected_script, 'r') as f:
+                     code = f.read()
+                 analysis = analyze_code(code, language)
+                 passed = analysis['sdk_passed']
+                 results[test_id] = {
+                    "passed": passed, 
+                    "analysis": analysis, 
+                    "script": expected_script
+                 }
+                 continue
+            
             print(f"\nTest: {test_id} ({language})")
             try:
                 code = await generate_code_with_skill(test_case['prompt'], language, client, args.model, run_dir)
@@ -564,6 +588,23 @@ async def main():
         for test_case in prompts:
             test_id = test_case.get('id', 'unknown')
             language = test_case.get('language', 'python')
+            
+            # Check if code file already exists as a proxy for "done"
+            ext = "py" if language == "python" else "ts"
+            expected_script = os.path.join(generated_dir, f"{test_id}.{ext}")
+            
+            if os.path.exists(expected_script) and args.output_dir:
+                 print(f"Skipping {test_id} (already exists)")
+                 with open(expected_script, 'r') as f:
+                     code = f.read()
+                 analysis = analyze_code(code, language)
+                 passed = analysis['sdk_passed']
+                 results[test_id] = {
+                    "passed": passed, 
+                    "analysis": analysis, 
+                    "script": expected_script
+                 }
+                 continue
             
             print(f"\nTest: {test_id} ({language})")
             try:
