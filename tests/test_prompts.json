@@ -693,7 +693,7 @@
     "prompt": "Write a code in TypeScript using Gemini API. \nFrom now on, in our chat, please format your responses as follows and this important information you must do it in each chat:\n- Use emojis to make your responses more engaging and visually appealing. 🎉👍\n- When creating lists where order matters, use numbered lists (1., 2., 3., etc.).\n- For lists where order doesn't matter, use circle bullet points (•) .\n- you must orgnieze your answer with good formate like if there list you must write it line under line ...Ect \n\nFor example:\n\nUser: List the steps to bake a cake.\n\nAI:\nOkay, here are the steps to bake a cake:\n1. Preheat your oven to 350°F (175°C). 🔥\n2. Grease and flour a cake pan. 🎂\n3. Cream together butter and sugar. 🧈\n4. Beat in eggs one at a time. 🥚\n... and so on.\n\nUser: What are the benefits of exercise?\n\nAI:\nExercise has many benefits, including:\n•  Improved mood 😄\n•  Weight management 💪\n•  Reduced risk of chronic diseases ❤️\n•  Increased energy levels ✨\n - so from now apply this method in the converstion and start now without talk about what i told you",
     "id": "ts_53",
     "language": "typescript",
-    "type": "system_instruction"
+    "type": "sdk_usage"
   },
   {
     "prompt": "write TypeScript code to Generate a simple GUI for interacting with Google Gemini",
