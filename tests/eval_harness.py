@@ -360,7 +360,7 @@ def fetch_url(url: str, timeout: int = 10) -> str:
         return f"Error: {e}"
 
 
-async def generate_code_with_skill(prompt: str, language: str, client: genai.Client, model: str, output_dir: str, max_steps: int = 8) -> str:
+async def generate_code_with_skill(prompt: str, language: str, client: genai.Client, model: str, output_dir: str, max_steps: int = 8, retries: int = 3) -> str:
     """Generate code using Gemini API with skill function calling."""
     print(f"Generating code via API (model: {model}) for ({language}): {prompt[:50]}...")
     
@@ -373,80 +373,95 @@ async def generate_code_with_skill(prompt: str, language: str, client: genai.Cli
         http_options={'timeout': 120000} # 2 minutes timeout
     )
     
-    # Initial request
-    response = await client.aio.models.generate_content(
-        model=model,
-        contents=prompt,
-        config=config
-    )
-    
-    # Handle function calls with max steps limit
-    # Build message history using actual Content objects to preserve thought_signature
-    messages = [genai.types.Content(role="user", parts=[genai.types.Part(text=prompt)])]
-    step = 0
-    
-    while step < max_steps and response.candidates and response.candidates[0].content.parts:
-        # Check if any part is a function call
-        has_function_call = False
-        for part in response.candidates[0].content.parts:
-            if hasattr(part, 'function_call') and part.function_call:
-                has_function_call = True
-                break
-        
-        if not has_function_call:
-            # It's a text response, we're done
-            break
-        
-        step += 1
-        print(f"  [Step {step}/{max_steps}]")
-        
-        # Add the model's full response (preserves thought_signature)
-        messages.append(response.candidates[0].content)
-        
-        # Process all function calls in this response
-        function_response_parts = []
-        for part in response.candidates[0].content.parts:
-            if hasattr(part, 'function_call') and part.function_call:
-                func_call = part.function_call
+    for attempt in range(retries + 1):
+        try:
+            # Initial request
+            response = await client.aio.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=config
+            )
+            
+            # Handle function calls with max steps limit
+            # Build message history using actual Content objects to preserve thought_signature
+            messages = [genai.types.Content(role="user", parts=[genai.types.Part(text=prompt)])]
+            step = 0
+            
+            while step < max_steps and response.candidates and response.candidates[0].content.parts:
+                # Check if any part is a function call
+                has_function_call = False
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, 'function_call') and part.function_call:
+                        has_function_call = True
+                        break
                 
-                # Dispatch to the correct function
-                if func_call.name == "activate_skill":
-                    arg_value = func_call.args.get('name', 'unknown')
-                    print(f"    -> activate_skill: {arg_value}")
-                    result = load_skill(arg_value)
-                elif func_call.name == "fetch_url":
-                    arg_value = func_call.args.get('url', '')
-                    print(f"    -> fetch_url: {arg_value[:60]}...")
-                    result = fetch_url(arg_value)
-                else:
-                    print(f"    -> unknown function: {func_call.name}")
-                    result = f"Unknown function: {func_call.name}"
+                if not has_function_call:
+                    # It's a text response, we're done
+                    break
                 
-                # Create function response part
-                function_response_parts.append(
-                    genai.types.Part.from_function_response(
-                        name=func_call.name,
-                        response={"content": result}
-                    )
+                step += 1
+                print(f"  [Step {step}/{max_steps}]")
+                
+                # Add the model's full response (preserves thought_signature)
+                messages.append(response.candidates[0].content)
+                
+                # Process all function calls in this response
+                function_response_parts = []
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, 'function_call') and part.function_call:
+                        func_call = part.function_call
+                        
+                        # Dispatch to the correct function
+                        if func_call.name == "activate_skill":
+                            arg_value = func_call.args.get('name', 'unknown')
+                            print(f"    -> activate_skill: {arg_value}")
+                            result = load_skill(arg_value)
+                        elif func_call.name == "fetch_url":
+                            arg_value = func_call.args.get('url', '')
+                            print(f"    -> fetch_url: {arg_value[:60]}...")
+                            result = fetch_url(arg_value)
+                        else:
+                            print(f"    -> unknown function: {func_call.name}")
+                            result = f"Unknown function: {func_call.name}"
+                        
+                        # Create function response part
+                        function_response_parts.append(
+                            genai.types.Part.from_function_response(
+                                name=func_call.name,
+                                response={"content": result}
+                            )
+                        )
+                
+                # Add function responses as user message
+                messages.append(genai.types.Content(role="user", parts=function_response_parts))
+                
+                # Continue the conversation
+                response = await client.aio.models.generate_content(
+                    model=model,
+                    contents=messages,
+                    config=config
                 )
-        
-        # Add function responses as user message
-        messages.append(genai.types.Content(role="user", parts=function_response_parts))
-        
-        # Continue the conversation
-        response = await client.aio.models.generate_content(
-            model=model,
-            contents=messages,
-            config=config
-        )
-    
-    if step >= max_steps:
-        print(f"  WARNING: Reached max steps ({max_steps}), stopping function call loop")
-    
-    # Log conversation history to file for debugging
-    log_conversation_history(messages, response, prompt, output_dir)
-    
-    return extract_code(response.text, language)
+            
+            if step >= max_steps:
+                print(f"  WARNING: Reached max steps ({max_steps}), stopping function call loop")
+            
+            # Log conversation history to file for debugging
+            log_conversation_history(messages, response, prompt, output_dir)
+            
+            return extract_code(response.text, language)
+
+        except Exception as e:
+            error_str = str(e)
+            is_5xx = any(code in error_str for code in ["500", "502", "503", "504", "Internal", "DeadlineExceeded"])
+            if attempt < retries and is_5xx:
+                wait_time = (attempt + 1) * 2 
+                print(f"  WARNING: API error (attempt {attempt+1}/{retries+1}): {e}. Retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+            else:
+                 if attempt == retries and is_5xx:
+                     print(f"  ERROR: Failed after {retries+1} attempts.")
+                 raise e
+    return ""
 
 
 def log_conversation_history(messages: list, response, prompt: str, output_dir: str) -> None:
