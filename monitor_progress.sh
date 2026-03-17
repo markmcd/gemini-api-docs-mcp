@@ -1,4 +1,6 @@
 #!/bin/bash
+BASE_DIR="${1:-tests/runs}"
+
 while true; do
   clear
   echo "=== Evaluation Progress Monitor ==="
@@ -8,13 +10,13 @@ while true; do
   # 1. List Completed/Other Runs
   echo "--- Run History ---"
   # Find all run directories sorted by time (oldest first)
-  ALL_RUNS=$(ls -d tests/runs/*/ 2>/dev/null | sort)
+  ALL_RUNS=$(ls -d ${BASE_DIR}/*/ 2>/dev/null | sort)
   
   if [ -z "$ALL_RUNS" ]; then
     echo "No runs found."
   else
     # Determine the latest run to distinguish it
-    LATEST_RUN=$(ls -td tests/runs/*/ 2>/dev/null | head -n 1)
+    LATEST_RUN=$(ls -td ${BASE_DIR}/*/ 2>/dev/null | head -n 1)
     
     for run in $ALL_RUNS; do
       DIR_NAME=$(basename "$run")
